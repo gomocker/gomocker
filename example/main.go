@@ -20,6 +20,9 @@ var (
 
 func (*realDatabase) GetPasswordByLogin(login string) (string, error) {
 	time.Sleep(5 * time.Second)
+	if login != "admin" {
+		return "", ErrUserNotFound
+	}
 	return "admin", nil
 }
 
