@@ -11,17 +11,15 @@ type Database interface {
 	GetPasswordByLogin(login string) (string, error)
 }
 
-type realAuthService struct{}
+type realDatabase struct{}
 
 var (
 	ErrInvalidLoginData = errors.New("invalid login data")
 	ErrUserNotFound     = errors.New("user not found")
 )
 
-func (auth *realAuthService) GetPasswordByLogin(login string) (string, error) {
-	// make real call to database
+func (*realDatabase) GetPasswordByLogin(login string) (string, error) {
 	time.Sleep(5 * time.Second)
-
 	return "admin", nil
 }
 
@@ -40,14 +38,14 @@ func (a *Application) Login(login string, password string) error {
 	return nil
 }
 
-func NewApplication(auth Database) *Application {
+func NewApplication(db Database) *Application {
 	return &Application{
-		Database: auth,
+		Database: db,
 	}
 }
 
 func main() {
-	app := NewApplication(&realAuthService{})
+	app := NewApplication(&realDatabase{})
 
 	if err := app.Login("admin", "admin"); err != nil {
 		log.Fatalln(err)
