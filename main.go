@@ -22,17 +22,70 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-var outputFile = ""
+var (
+	configFile = "gomocker.json"
+	version    = "v1.0.5"
+)
 
 type Config struct {
-	Package string
-	Imports map[string]string
-	Mocks   map[string][]string
+	Package string              `json:"package"`
+	Output  string              `json:"output"`
+	Mocks   map[string][]string `json:"mocks"`
+	Imports map[string]string   `json:"imports"`
 }
+
+var configExample string = `{
+    "package": "golang_package_name",
+
+    "output": "gomocker_output.go",
+
+    "mocks": {
+        "io": [
+            "Reader",
+            "Writer",
+            "ReadWriter"
+        ],
+        "math/rand": [ "Source" ]
+    },
+
+    "imports": {
+        "io": "io",
+        "rand": "math/rand"
+    }
+}
+`
 
 func main() {
 	if len(os.Args) >= 2 {
-		outputFile = os.Args[1]
+		switch os.Args[1] {
+		case "version":
+			fmt.Println("gomocker version", version)
+		case "touch":
+			f, err := os.OpenFile(configFile, os.O_RDONLY, 0666)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					if err := ioutil.WriteFile(configFile, []byte(configExample), 0666); err != nil {
+						fmt.Println(err)
+						return
+					}
+					fmt.Println("gomocker.json file was created.")
+				} else {
+					fmt.Println(err)
+				}
+				return
+			}
+			defer f.Close()
+			fmt.Println("gomocker.json file already existed")
+		case "help":
+			fmt.Println("HELP:")
+			fmt.Println("")
+			fmt.Println(`1. Run "gomocker touch" command to create example "gomocker.json" config file`)
+			fmt.Println((`2. Run "gomocker output.go" command to write mocks in "output.go" file`))
+			fmt.Println((`3. output.go will contains constructors to create mocked interface`))
+			fmt.Println("")
+			fmt.Println(`For mor information, see https://github.com/gomocker/gomocker`)
+		}
+		return
 	}
 
 	packageName, err := packageName()
@@ -46,15 +99,15 @@ func main() {
 		return
 	}
 
-	b, err := ioutil.ReadFile("mock_config.json")
+	b, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	var c Config
+	var config Config
 
-	if err := json.Unmarshal(b, &c); err != nil {
+	if err := json.Unmarshal(b, &config); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -71,8 +124,8 @@ func main() {
 	aliasInterfacePackage := ""
 	aliasInterfaceName := ""
 
-	for pkg := range c.Mocks {
-		for i := 0; i < len(c.Mocks[pkg]); i++ {
+	for pkg := range config.Mocks {
+		for i := 0; i < len(config.Mocks[pkg]); i++ {
 			var interfacePackage string
 			var interfaceName string
 
@@ -80,7 +133,7 @@ func main() {
 				interfaceName = aliasInterfaceName
 				interfacePackage = strings.Trim(aliasInterfacePackage, "/")
 			} else {
-				interfaceName = c.Mocks[pkg][i]
+				interfaceName = config.Mocks[pkg][i]
 				interfacePackage = strings.Trim(pkg, "/")
 			}
 
@@ -112,14 +165,14 @@ func main() {
 			}
 
 			// if this is true interface
-			if aliasInterfacePackage != "" && i+1 != len(c.Mocks[pkg]) {
+			if aliasInterfacePackage != "" && i+1 != len(config.Mocks[pkg]) {
 				i++
 			}
 
 			aliasInterfacePackage = ""
 			aliasInterfaceName = ""
 
-			interfaceName = c.Mocks[pkg][i]
+			interfaceName = config.Mocks[pkg][i]
 			interfacePackage = strings.Trim(pkg, "/")
 
 			tmplData := TemplateStruct{
@@ -193,11 +246,11 @@ func main() {
 		return
 	}
 
-	if c.Package != "" {
-		data.Package = c.Package
+	if config.Package != "" {
+		data.Package = config.Package
 	}
 
-	for short, long := range c.Imports {
+	for short, long := range config.Imports {
 		data.Imports[short] = fmt.Sprintf("%q", long)
 	}
 
@@ -212,11 +265,12 @@ func main() {
 		return
 	}
 
-	if outputFile != "" {
-		err = ioutil.WriteFile(outputFile, b, 0666)
+	if config.Output != "" {
+		err = ioutil.WriteFile(config.Output, b, 0666)
 		if err != nil {
 			fmt.Println("\nPlease organize imports by yourself")
 		}
+		fmt.Println("ok")
 	} else {
 		fmt.Print(string(b))
 	}
