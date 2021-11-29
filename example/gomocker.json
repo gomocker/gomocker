@@ -1,7 +1,11 @@
 {
+    "package": "example",
+
+    "output": "gomocker_output.go",
+
     "mocks": {
         "example": [
             "Database"
         ]
-    }
+    },
 }

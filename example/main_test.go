@@ -48,7 +48,8 @@ func TestLogin(t *testing.T) {
 	}
 
 	for name, tc := range tt {
-		app := NewApplication(NewDatabaseMock(tc.databaseBehavior))
+		dbMock := NewDatabaseMock(tc.databaseBehavior)
+		app := NewApplication(dbMock)
 
 		err := app.Login(tc.login, tc.password)
 
