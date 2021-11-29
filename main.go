@@ -24,7 +24,7 @@ import (
 
 var (
 	configFile = "gomocker.json"
-	version    = "v1.0.9"
+	version    = "v1.1.0"
 )
 
 type Config struct {
@@ -55,6 +55,19 @@ var configExample string = `{
 }
 `
 
+var helpMessage string = `Gomocker is a tool for generating mocked interfaces in Go.
+
+Usage:
+	gomocker              run gomocker
+	gomocker <command>    run command
+
+The commands are:
+
+	touch       create example "gomocker.json" config file
+	version     print Gomocker version
+	help        print this help message
+`
+
 func main() {
 	if len(os.Args) >= 2 {
 		switch os.Args[1] {
@@ -76,12 +89,8 @@ func main() {
 			}
 			defer f.Close()
 			fmt.Println("gomocker.json file already existed")
-		case "help":
-			fmt.Println("HELP:")
-			fmt.Println("")
-			fmt.Println(`1. Run "gomocker touch" command to create example "gomocker.json" config file`)
-			fmt.Println((`2. Run "gomocker output.go" command to write mocks in "output.go" file`))
-			fmt.Println((`3. output.go will contains constructors to create mocked interface`))
+		case "help", "--help", "-h":
+			fmt.Println(helpMessage)
 			fmt.Println("")
 			fmt.Println(`For mor information, see https://github.com/gomocker/gomocker`)
 		}
