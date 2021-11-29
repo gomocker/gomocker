@@ -1,2 +1,2 @@
 ### Hi there 👋
-test message
+v1.0.6
