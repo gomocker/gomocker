@@ -1,5 +1,5 @@
 {
-    "package": "example",
+    "package": "main",
 
     "output": "gomocker_output.go",
 
@@ -7,5 +7,5 @@
         "example": [
             "Database"
         ]
-    },
+    }
 }
