@@ -24,7 +24,7 @@ import (
 
 var (
 	configFile = "gomocker.json"
-	version    = "v1.1.0"
+	version    = "v1.1.1"
 )
 
 type Config struct {
@@ -126,7 +126,7 @@ func main() {
 		return
 	}
 	var data Data
-
+	data.Version = version
 	data.Package = packageName
 	data.Imports = make(map[string]string)
 
@@ -286,6 +286,7 @@ func main() {
 }
 
 type Data struct {
+	Version string
 	Package string
 	Imports map[string]string
 	Tmpls   []TemplateStruct
