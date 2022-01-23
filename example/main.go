@@ -8,7 +8,7 @@ import (
 )
 
 type Database interface {
-	GetPasswordByLogin(login string) (string, error)
+	GetPasswordByLogin(login string) (password string, err error)
 }
 
 type realDatabase struct{}

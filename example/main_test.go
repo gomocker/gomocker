@@ -6,55 +6,56 @@ import (
 
 func TestLogin(t *testing.T) {
 	type testCase struct {
-		databaseBehavior DatabaseBehavior
-		login            string
-		password         string
-		err              error
+		database Database
+		login    string
+		password string
+		err      error
 	}
 
-	tt := map[string]testCase{}
+	testCases := map[string]testCase{}
 
-	tt["normal case"] = testCase{
-		databaseBehavior: DatabaseBehavior{
-			GetPasswordByLogin: func(login string) (out1 string, out2 error) {
+	testCases["normal case"] = testCase{
+		database: NewDatabaseMock(DatabaseBehavior{
+			GetPasswordByLogin: func(login string) (password string, err error) {
 				return "admin", nil
 			},
-		},
+		}),
 		login:    "admin",
 		password: "admin",
 		err:      nil,
 	}
 
-	tt["invalid login; user not found"] = testCase{
-		databaseBehavior: DatabaseBehavior{
-			GetPasswordByLogin: func(login string) (out1 string, out2 error) {
-				return "admin", ErrUserNotFound
+	testCases["user not found in database"] = testCase{
+		database: NewDatabaseMock(DatabaseBehavior{
+			GetPasswordByLogin: func(login string) (password string, err error) {
+				return "", ErrUserNotFound
 			},
-		},
-		login:    "invalid_login",
+		}),
+		login:    "admin",
 		password: "admin",
 		err:      ErrUserNotFound,
 	}
 
-	tt["invalid password"] = testCase{
-		databaseBehavior: DatabaseBehavior{
-			GetPasswordByLogin: func(login string) (out1 string, out2 error) {
-				return "admin", nil
+	testCases["invalid password"] = testCase{
+		database: NewDatabaseMock(DatabaseBehavior{
+			GetPasswordByLogin: func(login string) (password string, err error) {
+				return "admin", ErrInvalidLoginData
 			},
-		},
+		}),
 		login:    "admin",
 		password: "invalid_password",
 		err:      ErrInvalidLoginData,
 	}
 
-	for name, tc := range tt {
-		dbMock := NewDatabaseMock(tc.databaseBehavior)
-		app := NewApplication(dbMock)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			app := NewApplication(tc.database)
 
-		err := app.Login(tc.login, tc.password)
+			err := app.Login(tc.login, tc.password)
 
-		if err != tc.err {
-			t.Errorf("Expected %q, got %q; Test case %q", tc.err, err, name)
-		}
+			if err != tc.err {
+				t.Errorf("Expected %q, got %q; Test case %q", tc.err, err, name)
+			}
+		})
 	}
 }

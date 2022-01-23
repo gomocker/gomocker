@@ -4,7 +4,7 @@ output: gomocker_output.go
 
 mocks:
   example:
-    - Reader
+    - Database
   io:
     - Reader
     - Writer
