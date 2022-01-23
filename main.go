@@ -24,7 +24,7 @@ import (
 
 var (
 	configFile = "gomocker.yml"
-	version    = "v1.2.1"
+	version    = "v1.2.2"
 )
 
 type Config struct {
@@ -121,18 +121,25 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	var data Data
-	data.Version = version
-	data.Package = packageName
-	data.Imports = make(map[string]string)
 
-	aliasInterfacePackage := ""
-	aliasInterfaceName := ""
+	data := Data{
+		Version: version,
+		Package: packageName,
+		Imports: make(map[string]string),
+	}
+
+	// переменные используются в случае, если интерфейс являетяс лишь алисом для другого интерфейса
+	var (
+		aliasInterfacePackage string
+		aliasInterfaceName    string
+	)
 
 	for pkg := range config.Mocks {
 		for i := 0; i < len(config.Mocks[pkg]); i++ {
-			var interfacePackage string
-			var interfaceName string
+			var (
+				interfacePackage string
+				interfaceName    string
+			)
 
 			if aliasInterfaceName != "" {
 				interfaceName = aliasInterfaceName
@@ -162,14 +169,14 @@ func main() {
 			}
 
 			if interfaceType.QualType != nil {
-				// if interface is an alias to another interface
+				// Если это алиас
 				aliasInterfacePackage = interfaceType.QualType.Package
 				aliasInterfaceName = interfaceType.QualType.Name
 				i--
 				continue
 			}
 
-			// if this is true interface
+			// Если это не алиас, а настоящий интерфейс
 			if aliasInterfacePackage != "" && i+1 != len(config.Mocks[pkg]) {
 				i++
 			}
