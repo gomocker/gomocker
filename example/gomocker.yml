@@ -1,0 +1,17 @@
+package: main
+
+output: gomocker_output.go
+
+mocks:
+  example:
+    - Reader
+  io:
+    - Reader
+    - Writer
+    - ReadWriter
+  math/rand:
+    - Source
+
+imports:
+  io: io
+  rand: math/rand
