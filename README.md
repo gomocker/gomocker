@@ -7,7 +7,7 @@ go install github.com/gomocker/gomocker@latest
 gomocker touch
 ```
 Команда выше создаст файла *gomocker.yml* в рабочей директории.
-### Стркутура конфигурационного файла
+### Структура конфигурационного файла
 ```yaml
 # gomocker.yml
 
