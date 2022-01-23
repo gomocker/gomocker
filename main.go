@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"go/parser"
@@ -16,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/armantarkhanian/gotype"
+	"gopkg.in/yaml.v2"
 
 	"github.com/iancoleman/strcase"
 	"golang.org/x/mod/modfile"
@@ -23,36 +23,32 @@ import (
 )
 
 var (
-	configFile = "gomocker.json"
-	version    = "v1.1.1"
+	configFile = "gomocker.yml"
+	version    = "v1.2.1"
 )
 
 type Config struct {
-	Package string              `json:"package"`
-	Output  string              `json:"output"`
-	Mocks   map[string][]string `json:"mocks"`
-	Imports map[string]string   `json:"imports"`
+	Package string              `yaml:"package"`
+	Output  string              `yaml:"output"`
+	Mocks   map[string][]string `yaml:"mocks"`
+	Imports map[string]string   `yaml:"imports"`
 }
 
-var configExample string = `{
-    "package": "golang_package_name",
+var configExample string = `package: main
 
-    "output": "gomocker_output.go",
+output: gomocker_output.go
 
-    "mocks": {
-        "io": [
-            "Reader",
-            "Writer",
-            "ReadWriter"
-        ],
-        "math/rand": [ "Source" ]
-    },
+mocks:
+  io:
+    - Reader
+    - Writer
+    - ReadWriter
+  math/rand:
+    - Source
 
-    "imports": {
-        "io": "io",
-        "rand": "math/rand"
-    }
-}
+imports:
+  io: io
+  rand: math/rand
 `
 
 var helpMessage string = `Gomocker is a tool for generating mocked interfaces in Go.
@@ -63,7 +59,7 @@ Usage:
 
 The commands are:
 
-	touch       create example "gomocker.json" config file
+	touch       create example "gomocker.yml" config file
 	version     print Gomocker version
 	help        print this help message
 `
@@ -81,14 +77,14 @@ func main() {
 						fmt.Println(err)
 						return
 					}
-					fmt.Println("gomocker.json file was created.")
+					fmt.Println("gomocker.yml file was created.")
 				} else {
 					fmt.Println(err)
 				}
 				return
 			}
 			defer f.Close()
-			fmt.Println("gomocker.json file already existed")
+			fmt.Println("gomocker.yml file already existed")
 		case "help", "--help", "-h":
 			fmt.Println(helpMessage)
 			fmt.Println("")
@@ -97,12 +93,12 @@ func main() {
 		return
 	}
 
-	packageName, err := packageName()
+	packageName, err := determinePackageName()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	moduleName, err := moduleName()
+	moduleName, err := determineModuleName()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -116,7 +112,7 @@ func main() {
 
 	var config Config
 
-	if err := json.Unmarshal(b, &config); err != nil {
+	if err := yaml.Unmarshal(b, &config); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -188,9 +184,7 @@ func main() {
 				StructFields: []string{},
 			}
 
-			if strings.HasPrefix(interfacePackage, moduleName+"/") {
-				interfacePackage = strings.TrimPrefix(interfacePackage, moduleName+"/")
-			}
+			interfacePackage = strings.TrimPrefix(interfacePackage, moduleName+"/")
 
 			packageBase := filepath.Base(interfacePackage)
 			if packageBase == packageName || packageBase == moduleName {
@@ -203,7 +197,7 @@ func main() {
 			}
 			tmplData.OriginalInterface += interfaceName
 
-			tmplData.MockName = strcase.ToCamel(interfaceName)
+			tmplData.MockName = strcase.ToCamel(packageBase) + strcase.ToCamel(interfaceName)
 			tmplData.StructName = strcase.ToLowerCamel(tmplData.MockName)
 
 			for _, m := range interfaceType.InterfaceType.Methods {
@@ -238,6 +232,20 @@ func main() {
 
 				structField := m.Name + " " + anonFunc
 				tmplData.StructFields = append(tmplData.StructFields, structField)
+
+				var isDuplicateMethod bool
+
+				for _, mm := range tmplData.Methods {
+					if mm.Name == m.Name {
+						isDuplicateMethod = true
+						break
+					}
+				}
+
+				if isDuplicateMethod {
+					fmt.Printf("Method %q is already present in interface %q, so it's ignored", m.Name, interfaceName)
+					continue
+				}
 
 				tmplData.Methods = append(tmplData.Methods, Method{
 					Name:              m.Name,
@@ -309,7 +317,7 @@ type TemplateStruct struct {
 	DoesReturn        map[string]bool
 }
 
-func packageName() (string, error) {
+func determinePackageName() (string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -343,7 +351,7 @@ func packageName() (string, error) {
 	return packageName, nil
 }
 
-func moduleName() (string, error) {
+func determineModuleName() (string, error) {
 	modFile, err := findGoModFile()
 	if err != nil {
 		return "", err
